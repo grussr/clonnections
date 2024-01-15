@@ -1,5 +1,6 @@
 import {
   Button,
+  Center,
   ChakraProvider,
   Circle,
   Flex,
@@ -26,7 +27,7 @@ type State = {
   incomplete: Group[];
   items: string[];
   activeItems: string[];
-  mistakesRemaining: number;
+  mistakes: number;
 };
 
 const difficultyColor = (difficulty: 1 | 2 | 3 | 4): string => {
@@ -79,15 +80,16 @@ const methods = (state: State) => {
         state.items = incomplete.flatMap((group) => group.items);
         state.activeItems = [];
       } else {
-        state.mistakesRemaining -= 1;
+        state.mistakes += 1;
         state.activeItems = [];
 
-        if (state.mistakesRemaining === 0) {
+        /*if (state.mistakesRemaining === 0) {
           state.complete = [...state.incomplete];
           state.incomplete = [];
           state.items = [];
-        }
+        }*/
       }
+      window.localStorage.setItem("connectionsState", JSON.stringify(state));
     },
   };
 };
@@ -98,10 +100,11 @@ const useGame = (options: Options) => {
     complete: [],
     items: shuffle(options.groups.flatMap((g) => g.items)),
     activeItems: [],
-    mistakesRemaining: 3,
+    mistakes: 0,
   };
+  const savedState = JSON.parse(window.localStorage.getItem("connectionsState") ?? JSON.stringify(initialState))
 
-  const [state, fns] = useMethods(methods, initialState);
+  const [state, fns] = useMethods(methods, savedState);
 
   return {
     ...state,
@@ -116,12 +119,13 @@ export const App = () => {
 
   return (
     <ChakraProvider>
-      <Flex h="100vh" w="100vw" align="center" justify="center">
+      <Flex h="100vh" w="100%" align="center" justify="center">
         <Stack spacing={4} align="center">
           <Heading size="3xl" fontFamily="Georgia" fontWeight="light">
             Connections
           </Heading>
           <Text fontWeight="semibold">Create four groups of four!</Text>
+          <Center>
           <Stack>
             {game.complete.map((group) => (
               <Stack
@@ -131,13 +135,13 @@ export const App = () => {
                 align="center"
                 justify="center"
                 h="80px"
-                w="624px"
+                w="100%"
                 bg={difficultyColor(group.difficulty)}
               >
-                <Text fontSize="xl" fontWeight="extrabold" textTransform="uppercase">
+                <Text fontSize="l" fontWeight="extrabold" textTransform="uppercase">
                   {group.category}
                 </Text>
-                <Text fontSize="xl" textTransform="uppercase">
+                <Text fontSize="l" textTransform="uppercase">
                   {group.items.join(', ')}
                 </Text>
               </Stack>
@@ -145,13 +149,13 @@ export const App = () => {
 
             {chunk(game.items, 4).map((row) => (
               <>
-                <HStack>
+                  <HStack>
                   {row.map((item) => (
                     <Button
-                      w="150px"
+                      w="25%"
                       h="80px"
                       bg="#efefe6"
-                      fontSize="16px"
+                      fontSize="14px"
                       fontWeight="extrabold"
                       textTransform="uppercase"
                       onClick={() => game.toggleActive(item)}
@@ -168,11 +172,9 @@ export const App = () => {
               </>
             ))}
           </Stack>
+          </Center>
           <HStack align="baseline">
-            <Text>Mistakes remaining:</Text>
-            {[...Array(game.mistakesRemaining).keys()].map(() => (
-              <Circle bg="gray.800" size="12px" />
-            ))}
+            <Text>Mistakes: {game.mistakes}</Text>
           </HStack>
           <HStack>
             <Button
