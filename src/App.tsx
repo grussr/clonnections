@@ -2,7 +2,6 @@ import {
   Button,
   Center,
   ChakraProvider,
-  Circle,
   Flex,
   HStack,
   Heading,
