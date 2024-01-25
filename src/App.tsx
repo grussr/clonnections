@@ -7,8 +7,11 @@ import {
   Heading,
   Stack,
   Text,
+  useInputGroupStyles,
 } from '@chakra-ui/react';
 import useMethods from 'use-methods';
+import { useEffect, useRef, useState } from "react";
+
 import { DAY_1 } from './constants';
 
 export type Group = {
@@ -17,8 +20,19 @@ export type Group = {
   difficulty: 1 | 2 | 3 | 4;
 };
 
+type NytGroup = {
+  level: number;
+  members: string[];
+}
+
+type NytGame = {
+  id: number;
+  groups: Record<string, NytGroup>;
+  startingGroups: string[][];
+}
+
 type Options = {
-  groups: Group[];
+  groups: NytGame;
 };
 
 type State = {
@@ -93,9 +107,19 @@ const methods = (state: State) => {
   };
 };
 
+const convertNytGame = (nytGame: NytGame): Group[] => {
+  let cloneGame:Group[] = new Array(4);
+  for (let i = 0; i < 4; i++) {
+    let currentGroup = nytGame.groups[i];
+    //cloneGame[i].difficulty = 1;
+    console.log(currentGroup);
+  }
+  return cloneGame;
+}
+
 const useGame = (options: Options) => {
   const initialState: State = {
-    incomplete: options.groups,
+    incomplete: options.groups.groups,
     complete: [],
     items: shuffle(options.groups.flatMap((g) => g.items)),
     activeItems: [],
@@ -112,9 +136,19 @@ const useGame = (options: Options) => {
 };
 
 export const App = () => {
-  const game = useGame({
-    groups: DAY_1,
-  });
+  //const game = useGame({
+  //  groups: DAY_1,
+  //});
+
+  const [gam, setGame] = useState<NytGame>();
+  useEffect(() => {
+    fetch("/puzzles/2024-01-10.json")
+      .then((res) => res.json())
+      .then(setGame);
+  }, []);
+  if (!gam) return;
+  //console.log(Object.values(gam.groups)[0].members);
+  const game = useEffect(() => { useGame({ groups: convertNytGame(gam) })}, [gam]);
 
   return (
     <ChakraProvider>
