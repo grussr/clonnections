@@ -8,7 +8,9 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react';
-import useMethods from 'use-methods';
+//import useMethods from 'use-methods';
+import { useEffect, useRef, useState } from "react";
+
 import { DAY_1 } from './constants';
 
 export type Group = {
@@ -103,19 +105,82 @@ const useGame = (options: Options) => {
   };
   const savedState = JSON.parse(window.localStorage.getItem("connectionsState") ?? JSON.stringify(initialState))
 
-  const [state, fns] = useMethods(methods, savedState);
+  return savedState;
+//   const [state, fns] = useMethods(methods, savedState);
 
-  return {
-    ...state,
-    ...fns,
-  };
-};
+//   return {
+//     ...state,
+//     ...fns,
+//   };
+ };
 
 export const App = () => {
-  const game = useGame({
-    groups: DAY_1,
-  });
+  //const responsetext = GetGameData();
+  //const [game, setGame] = useState<State>();
+  // complete: Group[];
+  // incomplete: Group[];
+  // items: string[];
+  const [activeItems, setActiveItems] = useState<string[]>([]);
+  const [incomplete, setIncomplete] = useState<Group[]>([]);
+  const [complete, setComplete] = useState<Group[]>([]);
+  const [items, setItems] = useState<string[]>([]);
+  const [mistakes, setMistakes] = useState(0);
+  //mistakes: number;
+  
+  useEffect(() => {
+    //fetch("https://rg-freebee-api.azurewebsites.net/api/generate_puzzle")
+    fetch("day1.json")
+    .then((res) => res.json())
+      .then((grps) => {
+        setIncomplete(grps);
+        setComplete([]);
+        setItems(grps.flatMap((g) => g.items));
+        //items: shuffle(options.groups.flatMap((g) => g.items)),
+        setActiveItems([]);
+        //mistakes: 0,
+    
+      })//setGame(useGame({groups: grps})));
+  }, []);
 
+  const toggleActive = (item: string) => {
+    if (activeItems.includes(item)) {
+      //game.activeItems = game.activeItems.filter((i) => i !== item);
+      setActiveItems(activeItems.filter((i) => i !== item ));
+    } else if (activeItems.length < 4) {
+      setActiveItems((prev) => [...prev, item]);
+    }
+  }
+
+  // shuffle() {
+  //   shuffle(state.items);
+  // },
+
+   const deselectAll = () => {
+    //if (!game) return;
+    setActiveItems([]);
+   }
+
+  const submit = () => {
+     const foundGroup = incomplete.find((group) =>
+       group.items.every((item) => activeItems.includes(item)),
+     );
+
+    if (foundGroup) {
+      setComplete((prev) => [...prev, foundGroup]);
+      console.log("incomplete length is " + incomplete.length);
+      let newIncomplete = incomplete.filter((group) => group !== foundGroup);
+      setIncomplete(newIncomplete);
+      setItems(newIncomplete.flatMap((group) => group.items));
+      console.log("incomplete length is " + newIncomplete.length);
+      setActiveItems([]);
+    } else {
+      setMistakes((prev) => prev+1);
+      setActiveItems([]);
+    }
+  //   window.localStorage.setItem("connectionsState",F JSON.stringify(state));
+  }
+
+  //if (!game) return;
   return (
     <ChakraProvider>
       <Flex h="100vh" w="100%" align="center" justify="center">
@@ -126,7 +191,7 @@ export const App = () => {
           <Text fontWeight="semibold">Create four groups of four!</Text>
           <Center>
           <Stack>
-            {game.complete.map((group) => (
+            {complete.map((group) => (
               <Stack
                 spacing={1}
                 lineHeight={1}
@@ -146,7 +211,7 @@ export const App = () => {
               </Stack>
             ))}
 
-            {chunk(game.items, 4).map((row) => (
+            {chunk(items, 4).map((row) => (
               <>
                   <HStack>
                   {row.map((item) => (
@@ -157,8 +222,8 @@ export const App = () => {
                       fontSize="14px"
                       fontWeight="extrabold"
                       textTransform="uppercase"
-                      onClick={() => game.toggleActive(item)}
-                      isActive={game.activeItems.includes(item)}
+                      onClick={() => toggleActive(item)}
+                      isActive={activeItems.includes(item)}
                       _active={{
                         bg: '#5a594e',
                         color: 'white',
@@ -173,7 +238,7 @@ export const App = () => {
           </Stack>
           </Center>
           <HStack align="baseline">
-            <Text>Mistakes: {game.mistakes}</Text>
+            <Text>Mistakes: {mistakes}</Text>
           </HStack>
           <HStack>
             <Button
@@ -181,7 +246,7 @@ export const App = () => {
               variant="outline"
               rounded="full"
               borderWidth="2px"
-              onClick={game.shuffle}
+              onClick={shuffle}
             >
               Shuffle
             </Button>
@@ -190,7 +255,7 @@ export const App = () => {
               variant="outline"
               rounded="full"
               borderWidth="2px"
-              onClick={game.deselectAll}
+              onClick={deselectAll}
             >
               Deselect All
             </Button>
@@ -199,8 +264,8 @@ export const App = () => {
               variant="outline"
               rounded="full"
               borderWidth="2px"
-              isDisabled={game.activeItems.length !== 4}
-              onClick={game.submit}
+              isDisabled={activeItems.length !== 4}
+              onClick={submit}
             >
               Submit
             </Button>
