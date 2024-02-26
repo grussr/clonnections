@@ -11,25 +11,15 @@ import {
 //import useMethods from 'use-methods';
 import { useEffect, useRef, useState } from "react";
 
-import { DAY_1 } from './constants';
-
 export type Group = {
   category: string;
   items: string[];
   difficulty: 1 | 2 | 3 | 4;
 };
 
-type Options = {
+type Game = {
   groups: Group[];
-};
-
-type State = {
-  complete: Group[];
-  incomplete: Group[];
-  items: string[];
-  activeItems: string[];
-  mistakes: number;
-};
+}
 
 const difficultyColor = (difficulty: 1 | 2 | 3 | 4): string => {
   return {
@@ -47,116 +37,61 @@ const chunk = <T,>(list: T[], size: number): T[][] => {
   });
 };
 
-const shuffle = <T,>(list: T[]): T[] => {
+const shuffleArray = <T,>(list: T[]): T[] => {
   return list.sort(() => 0.5 - Math.random());
 };
 
-const methods = (state: State) => {
-  return {
-    toggleActive(item: string) {
-      if (state.activeItems.includes(item)) {
-        state.activeItems = state.activeItems.filter((i) => i !== item);
-      } else if (state.activeItems.length < 4) {
-        state.activeItems.push(item);
-      }
-    },
-
-    shuffle() {
-      shuffle(state.items);
-    },
-
-    deselectAll() {
-      state.activeItems = [];
-    },
-
-    submit() {
-      const foundGroup = state.incomplete.find((group) =>
-        group.items.every((item) => state.activeItems.includes(item)),
-      );
-
-      if (foundGroup) {
-        state.complete.push(foundGroup);
-        const incomplete = state.incomplete.filter((group) => group !== foundGroup);
-        state.incomplete = incomplete;
-        state.items = incomplete.flatMap((group) => group.items);
-        state.activeItems = [];
-      } else {
-        state.mistakes += 1;
-        state.activeItems = [];
-
-        /*if (state.mistakesRemaining === 0) {
-          state.complete = [...state.incomplete];
-          state.incomplete = [];
-          state.items = [];
-        }*/
-      }
-      window.localStorage.setItem("connectionsState", JSON.stringify(state));
-    },
-  };
-};
-
-const useGame = (options: Options) => {
-  const initialState: State = {
-    incomplete: options.groups,
-    complete: [],
-    items: shuffle(options.groups.flatMap((g) => g.items)),
-    activeItems: [],
-    mistakes: 0,
-  };
-  const savedState = JSON.parse(window.localStorage.getItem("connectionsState") ?? JSON.stringify(initialState))
-
-  return savedState;
-//   const [state, fns] = useMethods(methods, savedState);
-
-//   return {
-//     ...state,
-//     ...fns,
-//   };
- };
-
 export const App = () => {
-  //const responsetext = GetGameData();
-  //const [game, setGame] = useState<State>();
-  // complete: Group[];
-  // incomplete: Group[];
-  // items: string[];
+  const [game, setGame] = useState<Game>();
+
   const [activeItems, setActiveItems] = useState<string[]>([]);
   const [incomplete, setIncomplete] = useState<Group[]>([]);
   const [complete, setComplete] = useState<Group[]>([]);
-  const [items, setItems] = useState<string[]>([]);
+  const [itemsInOrder, setItemsInOrder] = useState<string[]>([]);
   const [mistakes, setMistakes] = useState(0);
-  //mistakes: number;
   
   useEffect(() => {
-    //fetch("https://rg-freebee-api.azurewebsites.net/api/generate_puzzle")
     fetch("day1.json")
     .then((res) => res.json())
       .then((grps) => {
-        setIncomplete(grps);
-        setComplete([]);
-        setItems(grps.flatMap((g) => g.items));
-        //items: shuffle(options.groups.flatMap((g) => g.items)),
-        setActiveItems([]);
-        //mistakes: 0,
-    
-      })//setGame(useGame({groups: grps})));
+        setGame(grps);
+      })
   }, []);
+
+  const localRef = useRef<string>();
+  useEffect(() => {
+    if (!game) return;
+    localRef.current = "clonnections_day";
+    setComplete(
+      JSON.parse(window.localStorage.getItem(localRef.current+"complete") ?? "[]")
+    );
+    setIncomplete(
+      JSON.parse(window.localStorage.getItem(localRef.current+"incomplete") ?? JSON.stringify(game))
+    );
+    shuffle();
+  }, [game]);
+  useEffect(() => {
+    console.log("resetting order");
+    setItemsInOrder(shuffleArray(incomplete.flatMap((group) => group.items)));
+  }, [incomplete])
+  useEffect(() => {
+    if (!localRef.current) return;
+    window.localStorage.setItem(localRef.current+"complete", JSON.stringify(complete));
+    window.localStorage.setItem(localRef.current+"incomplete", JSON.stringify(incomplete));
+  }, [complete, incomplete]);
 
   const toggleActive = (item: string) => {
     if (activeItems.includes(item)) {
-      //game.activeItems = game.activeItems.filter((i) => i !== item);
       setActiveItems(activeItems.filter((i) => i !== item ));
     } else if (activeItems.length < 4) {
       setActiveItems((prev) => [...prev, item]);
     }
   }
 
-  // shuffle() {
-  //   shuffle(state.items);
-  // },
-
+   const shuffle = () => {
+    setItemsInOrder(shuffleArray(incomplete.flatMap((group) => group.items)));
+  }
    const deselectAll = () => {
-    //if (!game) return;
     setActiveItems([]);
    }
 
@@ -167,20 +102,17 @@ export const App = () => {
 
     if (foundGroup) {
       setComplete((prev) => [...prev, foundGroup]);
-      console.log("incomplete length is " + incomplete.length);
-      let newIncomplete = incomplete.filter((group) => group !== foundGroup);
-      setIncomplete(newIncomplete);
-      setItems(newIncomplete.flatMap((group) => group.items));
-      console.log("incomplete length is " + newIncomplete.length);
+      
+      setIncomplete((prev) => prev.filter((group) => group !== foundGroup));
+      
       setActiveItems([]);
     } else {
       setMistakes((prev) => prev+1);
       setActiveItems([]);
     }
-  //   window.localStorage.setItem("connectionsState",F JSON.stringify(state));
   }
 
-  //if (!game) return;
+  if (!game) return;
   return (
     <ChakraProvider>
       <Flex h="100vh" w="100%" align="center" justify="center">
@@ -211,7 +143,7 @@ export const App = () => {
               </Stack>
             ))}
 
-            {chunk(items, 4).map((row) => (
+            {chunk(itemsInOrder, 4).map((row) => (
               <>
                   <HStack>
                   {row.map((item) => (
