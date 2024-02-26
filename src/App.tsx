@@ -7,9 +7,8 @@ import {
   Heading,
   Stack,
   Text,
-  useInputGroupStyles,
 } from '@chakra-ui/react';
-//import useMethods from 'use-methods';
+
 import { useEffect, useRef, useState } from "react";
 
 export type Group = {
